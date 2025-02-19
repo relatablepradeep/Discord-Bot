@@ -1,97 +1,65 @@
 const { Client, Events, GatewayIntentBits } = require('discord.js');
-const dotenv=require('dotenv')
-
+const dotenv = require('dotenv');
 const OpenAI = require("openai");
-
-
-
-
-//creating my client- this is my virtual client through which i will interact with my server
-//intends-what type of permission you are giving to them
-//guilds-update,edit etc
 
 dotenv.config();
 
-const Token=process.env.Token;
+const Token = process.env.Token;
 
+// Initialize OpenAI (DeepSeek API)
+const openai = new OpenAI({
+    apiKey: process.env.API_KEY, // Use DeepSeek API key
+    baseURL: 'https://api.deepseek.com/v1', // DeepSeek's API base URL
+});
 
 const client = new Client({ 
     intents: [
         GatewayIntentBits.Guilds, 
-        GatewayIntentBits.GuildMessages, //tells abut every single message send inside server
-        GatewayIntentBits.MessageContent //  read message content
+        GatewayIntentBits.GuildMessages, 
+        GatewayIntentBits.MessageContent 
     ] 
 });
 
-
-
-//creating a listner 
-//messageCreate will give access to message object 
-
+// Listen for messages
 client.on(Events.MessageCreate, async (message) => {
+    if (message.author.bot) return;
+    if (message.channel.id !== process.env.channel_id) return;
+    if (message.content.startsWith('!')) return;
 
-    if(message.author.bot) return;
-    if(message.channel.id !==process.env.channel_id) return ;
-
-    //like not every time mybot should get active 
-
-    if(message.content.startsWith('!')) return;
-
-    if(message.content.startsWith('create')){
-        const url=message.content.split('create')[1]
-        return message.reply({
-            content:'generating short ID for '+url,
-        })
+    if (message.content.startsWith('create')) {
+        const url = message.content.split('create')[1];
+        return message.reply({ content: `Generating short ID for ${url}` });
     }
 
-    let conversation=[{ role:'system' ,content:'in my absence you have to assiste people whatever they ask about me my name is pradeep chand i am 21 year old , i know react,express, ui/ux libary and many more also only tell these detail when they ask question related to it and tell in his absence you will guid them'}]
-
-
-    console.log(message.content);
-    // console.log(message) information about message sender reciver
-    message.reply({
-        content:'hey me to.....'   //now it will propgate multiple times beacuse it answering itself also
-    })
-
+    let conversation = [
+        { role: 'system', content: 'In my absence, you have to assist people. If they ask, tell them my name is Pradeep Chand, I am 21 years old, and I know React, Express, UI/UX libraries, and more. Only provide these details when specifically asked.' }
+    ];
 
     conversation.push({
-
-        role:'user',
-        content:message.content,
+        role: 'user',
+        content: message.content,
     });
-
-    //prentend that our bot is typing
 
     await message.channel.sendTyping();
 
-    const result=await openai.chat.completions.create({
+    try {
+        const result = await openai.chat.completions.create({
+            model: 'deepseek-chat', // Use DeepSeek's model
+            messages: conversation
+        });
 
-        model:'gpt-3.5-turbo',
-        messages:conversation
-
-
-    })
-
-    message.reply(result.data.choices[0].message)
+        message.reply(result.choices[0].message.content); // Corrected response structure
+    } catch (error) {
+        console.error("Error fetching response:", error);
+        message.reply("Sorry, I couldn't process your request , because my owner forget to purchase my credit but you can type /ping to get something");
+    }
 });
 
-//Making my own command
-
-const  openai = new OpenAI({
-
-    apiKey:process.env.API_KEY,
-
-
-
-
-})
-
-
-client.on('interactionCreate',(interaction)=>{
+// Handle Slash Commands
+client.on('interactionCreate', (interaction) => {
     console.log(interaction);
+    interaction.reply('Maybe you will lose many times, but don’t make it a habit.');
+});
 
-    interaction.reply('Maybe You Will lose Many times but Dont make it a habit'); //if you send if /ping i will will send you this
-})
-
-
-client.login(Token)
+// Login to Discord
+client.login(Token);
