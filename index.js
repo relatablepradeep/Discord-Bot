@@ -1,6 +1,8 @@
 const { Client, Events, GatewayIntentBits } = require('discord.js');
 const dotenv=require('dotenv')
 
+const OpenAI = require("openai");
+
 
 
 
@@ -16,18 +18,24 @@ const Token=process.env.Token;
 const client = new Client({ 
     intents: [
         GatewayIntentBits.Guilds, 
-        GatewayIntentBits.GuildMessages, 
-        GatewayIntentBits.MessageContent // Needed to read message content
+        GatewayIntentBits.GuildMessages, //tells abut every single message send inside server
+        GatewayIntentBits.MessageContent //  read message content
     ] 
 });
 
 
 
 //creating a listner 
+//messageCreate will give access to message object 
 
-client.on(Events.MessageCreate, message => {
+client.on(Events.MessageCreate, async (message) => {
 
     if(message.author.bot) return;
+    if(message.channel.id !==process.env.channel_id) return ;
+
+    //like not every time mybot should get active 
+
+    if(message.content.startsWith('!')) return;
 
     if(message.content.startsWith('create')){
         const url=message.content.split('create')[1]
@@ -36,15 +44,47 @@ client.on(Events.MessageCreate, message => {
         })
     }
 
+    let conversation=[{ role:'system' ,content:'in my absence you have to assiste people whatever they ask about me my name is pradeep chand i am 21 year old , i know react,express, ui/ux libary and many more also only tell these detail when they ask question related to it and tell in his absence you will guid them'}]
+
 
     console.log(message.content);
-    // console.log(message)
+    // console.log(message) information about message sender reciver
     message.reply({
         content:'hey me to.....'   //now it will propgate multiple times beacuse it answering itself also
     })
+
+
+    conversation.push({
+
+        role:'user',
+        content:message.content,
+    });
+
+    //prentend that our bot is typing
+
+    await message.channel.sendTyping();
+
+    const result=await openai.chat.completions.create({
+
+        model:'gpt-3.5-turbo',
+        messages:conversation
+
+
+    })
+
+    message.reply(result.data.choices[0].message)
 });
 
 //Making my own command
+
+const  openai = new OpenAI({
+
+    apiKey:process.env.API_KEY,
+
+
+
+
+})
 
 
 client.on('interactionCreate',(interaction)=>{
